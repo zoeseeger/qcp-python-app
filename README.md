@@ -252,8 +252,8 @@ the programme is run from.
 
 ### Mass rename
 
- - Swap any part of a name with another string\n
- - Can specify extention of those to change\n
+ - Swap any part of a name with another string
+ - Can specify extention of those to change
 
 ##### Example output 5:
 

@@ -1,0 +1,77 @@
+#!/Users/zoz/.local/share/virtualenvs/qcp_app-OPxV0gMC/bin/python3
+
+import sys, platform, argparse, os.path
+from qcp.runTasks import comp_tasks
+from qcp.giveInfo import giveUserInfo
+print("Python Version: " + platform.python_version())
+print("Quantum Chemistry Processor")
+
+
+filename = False
+
+p = argparse.ArgumentParser(description = "Quantum Chemistry Processor: V3-18-01-19")
+p.add_argument("-f", "--file",    help = "path to xyz/log file")
+p.add_argument("-t", "--task",    help = "task option")
+p.add_argument("-j", "--jobfile", help = "job template file")
+p.add_argument("--info",          help = "information", action='store_true')
+args = p.parse_args()
+
+# IF INFORMATION
+if args.info:
+    giveUserInfo()
+    sys.exit()
+
+# DEFAULTS
+path     = './'
+filename = False
+jobfile  = False
+
+# IF OPTIONAL XYZ FILE PROVIDED - CHECK I
+def check_exist_args_file(File):
+    if os.path.isfile(File):
+        path, filename = os.path.split(File)
+        filename = File
+    else:
+        p.print_help()
+        print('\n')
+        sys.exit("File cannot be found: " + File + '\n')
+    return path, filename
+
+if args.file:
+    path, filename = check_exist_args_file(args.file)
+if args.jobfile:
+    path, jobfile  = check_exist_args_file(args.jobfile)
+
+
+# POSSIBLE TASKS
+list_func = ["{}".format(x) for x in range(10)] + ['A', 'B']
+
+if args.task in list_func:
+    task = args.task
+else:
+    task = True
+    # USER INPUT
+    while task != "0" and task not in list_func:
+        task = input('What would you like to do? [0]          \n\
+                      1. Generate inp/job files from template \n\
+                      2. Pull energies                        \n\
+                      3. Check log files and sort             \n\
+                      4. Mass sed                             \n\
+                      5. Mass rename                          \n\
+                      6. Delete jobs from queue               \n\
+                      7. Counterpoise correction              \n\
+                      8. Distance and angles                  \n\
+                      9. Submit all com/job in folder         \n\
+                      A. Inflate system                       \n\
+                      B. Interaction energy                   \n\
+                      0. Quit                                 \n\
+                                                       Task: ')
+
+        task = task or "0"  # DEFAULT
+
+        # DEFINE TASK
+        if not task in list_func:
+            print('Input not recognised.')
+
+if task != '0':
+    comp_tasks(task, path, filename, jobfile)

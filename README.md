@@ -269,7 +269,7 @@ the programme is run from.
     Renaming  ./low2.job.o7391048 ./high2.job.o7391048
 
 
-##### Delete jobs from queue
+### Delete jobs from queue
 
  - Choose by:
     1. Number - Removes the number of jobs defined by the

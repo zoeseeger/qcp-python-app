@@ -10,11 +10,11 @@
 
 ### (2) Paths
 
-The path "/path/to/qcp" can be added to either "~/.bash_profile" or "~/.bashrc" such that "qcp" can be excecuted without the preceeding path. If "~/.bash_profile" or "~/.bashrc" do not exist you can simply create one (e.g. vim ~/bash_profile) and add qcp to your path by adding the line:
+The path "/path/to/qcp" can be added to either "\~/.bash_profile" or "\~/.bashrc" such that "qcp" can be excecuted without the preceeding path. If "\~/.bash_profile" or "\~/.bashrc" do not exist you can simply create one (e.g. vim ~/bash_profile) and add qcp to your path by adding the line:
 
     export PATH=/path/to/qcp:$PATH
 
-Note: The path will not be appended until you log in again, as these files are only read when your environment is initially set upon login. You can also run source ~/.bash_profile to reload the settings of your environment as defined in the file OR execute "export PATH=/path/to/qcp:$PATH" into your current terminal. 
+Note: The path will not be appended until you log in again, as these files are only read when your environment is initially set upon login. You can also run source \~/.bash_profile to reload the settings of your environment as defined in the file OR execute "export PATH=/path/to/qcp:$PATH" into your current terminal. 
 
 ### (3) To use
 

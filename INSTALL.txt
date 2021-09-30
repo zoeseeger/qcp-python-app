@@ -1,0 +1,13 @@
+Install with python using distutils
+
+The original tar.gz is made by 'python3 setup.py sdist' and can be untarred and installed by:
+
+    tar -xzf qcp-x.x.x.tar.gz
+
+    cd qcp-x.x.x
+
+    python3 -m setup.py build
+
+    python3 -m setup.py install
+
+This will create a folder called build with the library of source files and the excecutables in scripts-x.x. The excecutable uses /usr/bin/env python3 and so python3 must be loaded.

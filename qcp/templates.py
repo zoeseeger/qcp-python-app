@@ -2,6 +2,20 @@
 
 ### PSI4 JOB SCRIPT ONE NODE
 
+def psi_stmJob(name):
+    lines = ["#!/bin/bash\n",
+             "#SBATCH -J " + name + " \n", 
+             "#SBATCH -e " + name + ".err\n",  
+             "#SBATCH -p normal\n",         
+             "#SBATCH -N 1\n",              
+             "#SBATCH -n 1\n",              
+             "#SBATCH -c 16\n",
+             "#SBATCH -t 03:00:00\n\n",       
+             "module load psi4\n", # would need changing for others
+             "psi4 " + name + ".inp " + name + ".log\n",
+             "find . -empty -delete"] # slurm outputs slurm-[0-9]*.out by default, but psi4 doesn't write to it 
+    return lines
+
 def psi_rjnJob(name):
     # PSI4 MEMORY IN INP NEEDS >>> MEM IN JOB
     # CPUS FROM MEMORY
@@ -62,10 +76,10 @@ def psi_masJob(name):
 def gms_rjnJob(name):
     # DOESN'T REQUIRE WHOLE NODE
     #mem, cpus, jobfs, wall = memFmo(nfrags, 'rjn', mwords, ddi)
-    mem   = '16'
-    cpus  = '8'
+    mem   = '64'
+    cpus  = '16'
     jobfs = '100'
-    wall  = '48:00:00'
+    wall  = '2:00:00'
     lines=["#!/bin/sh\n",
     "#PBS -P k96\n",
     "#PBS -l mem=" + mem + "gb\n",
@@ -95,25 +109,60 @@ def orc_rjnJob(name):
 def gms_masJob(name):
     lines = ["#!/bin/bash\n",
              "#SBATCH --account=sn29\n",
-             "#SBATCH --time=06:00:00\n",
-             "#SBATCH --ntasks=8\n",
-             "#SBATCH --tasks-per-node=8\n",
+             "#SBATCH --job-name=" + name + "\n",
+             "#SBATCH --error=" + name + ".err\n",
+             "#SBATCH --time=24:00:00\n",
+             "#SBATCH --ntasks=16\n",
+             "#SBATCH --tasks-per-node=16\n",
              "#SBATCH --cpus-per-task=1\n",
-             "#SBATCH --mem=80G\n\n",
+             "#SBATCH --mem=32G\n",
+             "#SBATCH --partition=m3i\n\n",
              'export PROJECT="sn29"\n\n',
              "module load gamess/16srs1-v2\n\n",
              "rungms.m3 " + name + ".inp 00 $SLURM_NTASKS > " + name + ".log"]
     return lines
 
+def gms_monJob(name):
+    lines = ["#!/bin/bash\n",
+             "#SBATCH --qos=partner\n"
+             "#SBATCH --job-name=" + name + "\n",
+             "#SBATCH --error=" + name + ".err\n",
+             "#SBATCH --time=24:00:00\n",
+             "#SBATCH --ntasks=16\n",
+             "#SBATCH --tasks-per-node=16\n",
+             "#SBATCH --cpus-per-task=1\n",
+             "#SBATCH --mem=32G\n\n",
+             "module load gamess/16srs1-v2\n\n",
+             "rungms.monarch " + name + ".inp 00 $SLURM_NTASKS > " + name + ".log"]
+    return lines
+
 def gms_mgsJob(name):
     lines = ["#!/bin/bash --login\n",
-    "#SBATCH --nodes=8\n",
+    "#SBATCH --nodes=1\n",
     "#SBATCH --account=pawsey0197\n",
     "#SBATCH --time=24:00:00\n",
+    "#SBATCH --output=" + name + ".log\n", 
+    "#SBATCH --error=" + name + ".err\n", 
     "#SBATCH --export=NONE\n\n",
-    "module use /group/pawsey0197/software/cle52up04/modulefiles\n",
-    "module load gamess/2016\n",
-    "rungms " + name + ".inp 00 12 12"]
+    "export OMP_NUM_THREADS=1\n",
+    "/group/pawsey0197/software/cle60up05/apps/gamess_cray_build/rungms " + name + ".inp 00 24 24"]
+    return lines
+
+def gms_stmJob(name):
+    lines = ["#!/bin/bash\n\n",
+    "#SBATCH -J " + name + "\n",
+    "#SBATCH -o " + name + ".log\n",
+    "#SBATCH -e " + name + ".e%j\n",
+    "#SBATCH -p skx-normal\n",
+    "#SBATCH -N 1\n",
+    "#SBATCH -n 22\n",
+    "#SBATCH -c 1\n",
+    "#SBATCH -t 10:00:00\n\n",
+    "module load intel/18.0.2\n",
+    "module load hdf5/1.10.4\n",
+    "module load my_gamess/srs-avx-512\n\n",
+    "rungms.tom " + name + ".inp 00 $SLURM_NTASKS"]
+
     return lines
 
 def gms_gaiJob(name):
@@ -159,15 +208,36 @@ def fmo_rjnJob(name, nfrags, mwords, ddi):
 def fmo_mgsJob(name, nfrags, mwords, ddi):
     cpus = memFmo(nfrags, 'mgs', mwords, ddi)
     lines = ["#!/bin/bash --login\n",
-    "#SBATCH --nodes=" + nfrags + "\n",
+    "#SBATCH --nodes=" + str(nfrags) + "\n",
     "#SBATCH --account=pawsey0197\n",
     "#SBATCH --time=24:00:00\n",
+    "#SBATCH --output=" + name + ".log\n",
+    "#SBATCH --error=" + name + ".err\n", 
     "#SBATCH --export=NONE\n\n",
-    "module use /group/pawsey0197/software/cle52up04/modulefiles\n",
-    "module load gamess/2016\n",
-    "rungms " + name + ".inp 00 " + cpus + " 12"]
+    "export OMP_NUM_THREADS=1\n",
+    "/group/pawsey0197/software/cle60up05/apps/gamess_cray_build/rungms " + name + ".inp 00 " + cpus + " 24"]
     return lines
 
+# Gamess on Stampede assume 22 servers per node- otherwise overclock memory requirements (48
+# available on a two-thread nodes, and used on gaussian)
+def fmo_stmJob(name, nfrags, mwords, ddi):
+    cpus = memFmo(nfrags, 'stm', mwords, ddi)
+    nnodes = str(int(float(cpus) / 22))
+    lines = ["#!/bin/bash\n",
+    "#SBATCH -J " + name + "\n",
+    "#SBATCH -o " + name + ".log\n",
+    "#SBATCH -e " + name + ".e%j\n",
+    "#SBATCH -p skx-normal\n",
+    "#SBATCH -N " + nnodes + "\n",
+    "#SBATCH -n " + cpus + "\n",
+    "#SBATCH -c 1\n",
+    "#SBATCH -t 24:00:00\n\n",
+    "module load intel/18.0.2\n",
+    "module load hdf5/1.10.4\n",
+    "module load my_gamess/srs-avx-512\n\n",
+    "rungms.tom " + name + ".inp 00 $SLURM_NTASKS"]
+
+    return lines
 
 ### FMO ON GAIA JOB SCRIPT //
 # FROM PHILIP NOT YET ESTABLISHED FOR MANY NODES
@@ -184,8 +254,47 @@ def fmo_gaiJob(name):
     "rungms " + name + ".inp 00 1 $NSLOTS > " + name + ".out"]
     return lines
 
+def fmo_monJob(name, nfrags, mwords, ddi):
+    cpus = memFmo(nfrags, 'mon', mwords, ddi)
+    mem = str(int(cpus) * 2) #2GB nodes
+    time = '48:00:00'
+    # impose a limit of 2 nodes max?
+    # increase time to account for fewer cores
+    # if int(cpus) > 32:
+        # cpus = '32'
+        # mem  = '64'
+        # time = '96:00:00'
+    lines = ["#!/bin/bash\n",
+             "#SBATCH --qos=partner\n"
+             "#SBATCH --job-name=" + name + "\n",      
+             "#SBATCH --error=" + name + ".err\n",
+             "#SBATCH --time=" + time + "\n",
+             "#SBATCH --ntasks=" + cpus + "\n",
+             "#SBATCH --tasks-per-node=16\n",
+             "#SBATCH --cpus-per-task=1\n",
+             "#SBATCH --mem=" + mem + "G\n\n",
+             "module load gamess/16srs1-v2\n\n",
+             "rungms.monarch " + name + ".inp 00 $SLURM_NTASKS > " + name + ".log"]
+    return lines
 
-
+def fmo_masJob(name, nfrags, mwords, ddi):
+    cpus = memFmo(nfrags, 'mas', mwords, ddi)
+    mem = str(int(cpus) * 2) #2GB nodes
+    time = '48:00:00'
+    lines = ["#!/bin/bash\n",
+             "#SBATCH --account=sn29\n",
+             "#SBATCH --job-name=" + name + "\n",
+             "#SBATCH --error=" + name + ".err\n",
+             "#SBATCH --time=" + time + "\n",
+             "#SBATCH --ntasks=" + cpus + "\n",
+             "#SBATCH --tasks-per-node=16\n",
+             "#SBATCH --cpus-per-task=1\n",
+             "#SBATCH --mem=" + mem + "G\n",
+             "#SBATCH --partition=m3i\n\n",
+             'export PROJECT="sn29"\n\n',
+             "module load gamess/16srs1-v2\n\n",
+             "rungms.m3 " + name + ".inp 00 $SLURM_NTASKS > " + name + ".log"]
+    return lines
 
 ### USES MWORDS, MEMDDI AND HARDWARE TO DETERMINE PARAMS
 def memFmo(nfrags, hw, mwords, ddi):
@@ -238,7 +347,7 @@ def memFmo(nfrags, hw, mwords, ddi):
         return mem, cpus, jobfs, wall
 
     # MAGNUS AND GAIA
-    elif hw == 'gai' or hw == 'mgs':
+    elif hw == 'gai':
         cpuPerNode = 12
         cpus       = nfrags * cpuPerNode
         mem        = cpus   * 2
@@ -254,7 +363,53 @@ def memFmo(nfrags, hw, mwords, ddi):
                 + "is > than the 2GB CPUs - consider <256 total per CPU")
         return str(cpus)
 
+    elif hw == 'mgs':
+        cpuPerNode = 24
+        cpus       = nfrags * cpuPerNode
+        mem        = cpus   * 4
+        if not ddi:
+            gbsPerCpu = mwords * 8/1024
+            if gbsPerCpu > 4:
+                print("The amount of mwords in your template "\
+                + "is > than the 4GB cpus - consider <400")
+        else:
+            gbsPerCpu = (mwords + ddi/cpus) * 8/1024
+            if gbsPerCpu > 4:
+                print("The amount of mwords & ddi in your template "\
+                + "is > than the 4GB CPUs - consider <400 total per CPU")
+        return str(cpus)
 
+    elif hw == 'stm':
+        cpuPerNode = 22
+        cpus       = nfrags * cpuPerNode
+        mem        = cpus   * 4
+        if not ddi:
+            gbsPerCpu = mwords * 8/1024
+            if gbsPerCpu > 4:
+                print("The amount of mwords in your template "\
+                + "is > than the 4GB cpus - consider <400")
+        else:
+            gbsPerCpu = (mwords + ddi/cpus) * 8/1024
+            if gbsPerCpu > 4:
+                print("The amount of mwords & ddi in your template "\
+                + "is > than the 4GB CPUs - consider <400 total per CPU")
+        return str(cpus)
+
+    elif hw == 'mon' or hw == 'mas':
+        cpuPerNode = 16
+        cpus       = nfrags * cpuPerNode
+        mem        = cpus   * 2
+        if not ddi:
+            gbsPerCpu = mwords * 8/1024
+            if gbsPerCpu > 2:
+                print("The amount of mwords in your template "\
+                + "is > than the 2GB cpus - consider <256")
+        else:
+            gbsPerCpu = (mwords + ddi/cpus) * 8/1024
+            if gbsPerCpu > 2:
+                print("The amount of mwords & ddi in your template "\
+                + "is > than the 2GB CPUs - consider <256 total per CPU")
+        return str(cpus)
 
 
 ### UNUSED ----------------------------------------------
@@ -333,8 +488,6 @@ def psi4_jobComp():
     "setenv MKL_NUM_THREADS $PBS_NCPUS",
 
     "psi4 pyrdcaconf2conf3.inp pyrdcaconf2conf3.out"]
-
-    return lines
 
 
 

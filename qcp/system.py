@@ -1,7 +1,7 @@
 ### GET DATA AND PASS TO sep_mol
 # ONLY WANT TO DO ONCE PER XYZ
 def systemData(path, File, check):
-    from qcp.general import xyzPull
+    from general import xyzPull
 
     # CUTOFF BETWEEN FRAGS
     distca = 1.7
@@ -59,10 +59,10 @@ def systemData(path, File, check):
     # SORT DICT
     atmList = sorted(atmList, key=lambda k: k['grp'])
 
-    #print(atmList)
+    # print(atmList)
 
-    #for i in atmList:
-    #    print(i)
+    # for i in atmList:
+       # print(i)
 
     return [fragList, atmList, totChrg, totMult]
 
@@ -73,8 +73,8 @@ def sep_mol(coords, distca, Type):
 
     import math
     import numpy       as np
-    from   qcp.pprint      import detec
-    from   qcp.chemData    import pTable
+    from   pprint      import detec
+    from   chemData    import pTable
 
     atmList = []
 
@@ -93,6 +93,7 @@ def sep_mol(coords, distca, Type):
         for sym, data in pTable.items():
             if atmDict["sym"]  == sym:
                 atmDict["nu"]  = data[0]
+                atmDict["mas"] = data[1]
                 atmDict["vdw"] = data[2]
         atmList.append(atmDict)
 
@@ -177,14 +178,18 @@ def sep_mol(coords, distca, Type):
 
     if Type == 'check_dist':
 
+        # NUMBER FRAG
+        ncat, nani, nnrt, nunk, nrad = 0, 0, 0, 0, 0
+
         print("-"*40)
         print("SYSTEM USING CUTOFF DISTANCE:")
-        #
+
         totChrg  = 0
         totMult  = 1
-        #
         nfrags_dist = 0
         fragList = []
+
+        # FIND DISTANCES
         for grp_dist in range(group_dist):
             fragDict_dist = {}
             fragDict_dist['ids'] = []
@@ -203,22 +208,31 @@ def sep_mol(coords, distca, Type):
                 if isCation(fragDict_dist['syms'], fragDict_dist['ids']):
                     fragDict_dist["chrg"] = 1
                     fragDict_dist["mult"] = 1
+                    fragDict_dist["name"] = "cation" + str(ncat)
+                    ncat += 1
                     if totChrg != '?':
                         totChrg += 1
 
                 elif isAnion(fragDict_dist['syms'], fragDict_dist['ids']):
                     fragDict_dist["chrg"] = -1
                     fragDict_dist["mult"] = 1
+                    fragDict_dist["name"] = "anion" + str(nani)
+                    nani += 1
                     if totChrg != '?':
                         totChrg += -1
 
                 elif isNeutral(fragDict_dist['syms'], fragDict_dist['ids']):
                     fragDict_dist["chrg"] = 0
                     fragDict_dist["mult"] = 1
+                    fragDict_dist["name"] = "neutral" + str(nnrt)
+                    nnrt += 1
+
 
                 elif isRadical(fragDict_dist['syms'], fragDict_dist['ids']):
                     fragDict_dist["chrg"] = 0
                     fragDict_dist["mult"] = 2
+                    fragDict_dist["name"] = "radical" + str(nrad)
+                    nrad += 1
                     totMult = 2
 
                 else:
@@ -233,9 +247,10 @@ def sep_mol(coords, distca, Type):
                     detec("unknown", chemForm, " ".join(str(x+1) for x in fragDict_dist['ids']))
                     fragDict_dist["chrg"] = '?'
                     fragDict_dist["mult"] = '?'
+                    fragDict_dist["name"] = "unknown" + str(nunk)
+                    nunk += 1
                     totChrg = '?'
                     totMult = '?'
-
 
                 # FOR NEXT FRAGMENT
                 fragList.append(fragDict_dist)
@@ -244,18 +259,19 @@ def sep_mol(coords, distca, Type):
 
     elif Type == 'check_vdw':
 
-        # WON'T USE THESE
-        fragList = totChrg = totMult = False
-
         # CREATE fragList --------------------------------------------------------
         print("-"*40)
         print("SYSTEM USING VDW's RADII:")
 
+        # PROPERTIES
         totChrg = 0
         totMult = 1
-        #
         nfrags_vdw = 0
         fragList = []
+
+        # NAMING
+        ncat, nani, nntr, nunk, nrad = 0, 0, 0, 0, 0
+
         for grp_vdw in range(group_vdw):
             fragDict_vdw = {}
             fragDict_vdw['ids'] = []
@@ -274,22 +290,30 @@ def sep_mol(coords, distca, Type):
                 if isCation(fragDict_vdw['syms'], fragDict_vdw['ids']):
                     fragDict_vdw["chrg"] = 1
                     fragDict_vdw["mult"] = 1
+                    fragDict_vdw["name"] = "cation" + str(ncat)
+                    ncat += 1
                     if totChrg != '?':
                         totChrg += 1
 
                 elif isAnion(fragDict_vdw['syms'], fragDict_vdw['ids']):
                     fragDict_vdw["chrg"] = -1
                     fragDict_vdw["mult"] = 1
+                    fragDict_vdw["name"] = "anion" + str(nani)
+                    nani += 1
                     if totChrg != '?':
                         totChrg += -1
 
                 elif isNeutral(fragDict_vdw['syms'], fragDict_vdw['ids']):
                     fragDict_vdw["chrg"] = 0
                     fragDict_vdw["mult"] = 1
+                    fragDict_vdw["name"] = "neutral" + str(nntr)
+                    nntr += 1
 
                 elif isRadical(fragDict_vdw['syms'], fragDict_vdw['ids']):
                     fragDict_vdw["chrg"] = 0
                     fragDict_vdw["mult"] = 2
+                    fragDict_vdw["name"] = "radical" + str(nrad)
+                    nrad += 1
                     totMult = 2
 
                 else:
@@ -304,6 +328,8 @@ def sep_mol(coords, distca, Type):
                     detec("unknown", chemForm, " ".join(str(x+1) for x in fragDict_vdw['ids']))
                     fragDict_vdw["chrg"] = '?'
                     fragDict_vdw["mult"] = '?'
+                    fragDict_vdw["name"] = "unknown" + str(nunk)
+                    nunk += 1
                     totChrg = '?'
                     totMult = '?'
 
@@ -324,16 +350,14 @@ def sep_mol(coords, distca, Type):
 
     return atmList, fragList, totChrg, totMult
 
-#
-#
-# ----------- FUNCTIONS ADAPTED FROM PPQC Samual Tan
 
+# ----------- FUNCTIONS ADAPTED FROM PPQC Samual Tan
 
 def isCation(a, b, q = False):
 
     import collections as col
-    from qcp.chemData import CationDB
-    from qcp.pprint   import detec
+    from chemData import CationDB
+    from pprint   import detec
 
     #a = mol.atomListAsElem_Sym()
     isCat = False
@@ -353,8 +377,8 @@ def isCation(a, b, q = False):
 def isAnion(a, b, q = False):
 
     import collections as col
-    from qcp.chemData import AnionDB
-    from qcp.pprint   import detec
+    from chemData import AnionDB
+    from pprint   import detec
 
     # q for quiet
     #a = mol.atomListAsElem_Sym()
@@ -382,8 +406,8 @@ def isAnion(a, b, q = False):
 
 def isNeutral(a, b, q = False):
     import collections as col
-    from qcp.chemData import NeutralDB
-    from qcp.pprint   import detec
+    from chemData import NeutralDB
+    from pprint   import detec
 
     isNeu = False
     for key, molec in NeutralDB.items():
@@ -401,8 +425,8 @@ def isNeutral(a, b, q = False):
 
 def isRadical(a, b, q = False):
     import collections as col
-    from qcp.chemData import RadicalDB
-    from qcp.pprint   import detec
+    from chemData import RadicalDB
+    from pprint   import detec
 
     isRad = False
     for key, molec in RadicalDB.items():

@@ -119,27 +119,27 @@ def find_files(path, level, file_pattern):
 
 
 ### GET XYZ DATA FROM .xyz
-def xyzPull(path, File):
-    import re
-
-    coords = []
-
-    with open(path + File, 'r') as f:
-        for num, line in enumerate(f):
-            if re.search('[A-Z]\s*', line) and num > 1:
-                # MAKE SECOND CHARACTER LOWER CASE
-                spl_line = line.split()
-                for val, chrtr in enumerate(spl_line[0]):
-                    if val == 0:
-                        first = chrtr
-                    elif val == 1:
-                        second = chrtr.lower()
-                        sym = first + second
-                        line = line.replace(spl_line[0], sym)
-                coords.append(line.split())
-    #print(coords)
-    #sys.exit()
-    return coords
+# def xyzPull(path, File):
+#     import re
+#
+#     coords = []
+#
+#     with open(path + File, 'r') as f:
+#         for num, line in enumerate(f):
+#             if re.search('[A-Z]\s*', line) and num > 1:
+#                 # MAKE SECOND CHARACTER LOWER CASE
+#                 spl_line = line.split()
+#                 for val, chrtr in enumerate(spl_line[0]):
+#                     if val == 0:
+#                         first = chrtr
+#                     elif val == 1:
+#                         second = chrtr.lower()
+#                         sym = first + second
+#                         line = line.replace(spl_line[0], sym)
+#                 coords.append(line.split())
+#     #print(coords)
+#     #sys.exit()
+#     return coords
 
 
 ### RETURN END OF FILE
@@ -219,7 +219,7 @@ def psi_check_spec(path, File):
 ### GET XYZ DATA FROM .xyz
 def xyzPull(path, File):
     import re
-
+    import sys
     coords = []
 
     with open(path + File, 'r') as f:

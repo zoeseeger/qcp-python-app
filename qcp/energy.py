@@ -1,7 +1,7 @@
 def energy_gms(path, File, energy):
-    from qcp.logFile import gms_log
-    from qcp.general import gms_check_spec
-    from qcp.general import eof
+    from logFile import gms_log
+    from general import gms_check_spec
+    from general import eof
 
     spec            = gms_check_spec(path, File)
     err, ext, stat  = gms_log(path, File, spec)
@@ -28,7 +28,7 @@ def energy_gms(path, File, energy):
                 elif 'THE POINT GROUP OF THE M' in line:
                     break
 
-        lines = eof(path, File, 0.1)
+        lines = eof(path, File, 0.2)
         if scs:
             for line in lines:
                 if "E corr SCS" in line:
@@ -50,7 +50,12 @@ def energy_gms(path, File, energy):
             for line in lines:
                 if "SCS-MP2" in line:
                     MP2 = line.split()
-                    MP2 = MP2[len(MP2) - 1]
+                    if 'E=' not in MP2[1]:
+                        MP2 = MP2[1]
+                        # E(MP2)=       -76.2919350192  ACTUALLY, THIS IS THE SCS-MP2 ENERGY
+                    else:
+                        # SCS-MP2 E=     -1161.8759377385 (magnus, massive)
+                        MP2 = MP2[-1]
                 elif 'E(0)=' in line:
                     HF  = line.split()
                     HF  = HF[len(HF) - 1]
@@ -63,9 +68,10 @@ def energy_gms(path, File, energy):
     sysDict["HF"  ] = HF
     sysDict["ZP"  ] = ZP
     sysDict["MP2" ] = MP2
-
+    ### A bit hacky
+    sysDict["MP2_opp"] = ''
+    sysDict["MP2_same"] = ''
     energy.append(sysDict)
-
     return energy
 
 
@@ -73,9 +79,9 @@ def energy_gms(path, File, energy):
 
 def energy_g09(path, File, energy):
     import re
-    from qcp.logFile import g09_log
-    from qcp.general import g09_check_spec
-    from qcp.general import eof
+    from logFile import g09_log
+    from general import g09_check_spec
+    from general import eof
 
     HF      = ''
     ZP      = ''
@@ -141,7 +147,9 @@ def energy_g09(path, File, energy):
     sysDict["HF"  ] = HF
     sysDict["ZP"  ] = ZP
     sysDict["MP2" ] = MP2
-
+    ### A bit hacky
+    sysDict["MP2_opp"] = ''
+    sysDict["MP2_same"] = ''
     energy.append(sysDict)
 
     return energy
@@ -149,13 +157,15 @@ def energy_g09(path, File, energy):
 
 
 def energy_psi(path, File, energy):
-    from qcp.logFile import psi_log
-    from qcp.general import psi_check_spec
-    from qcp.general import eof
+    from logFile import psi_log
+    from general import psi_check_spec
+    from general import eof
 
-    HF      = ''
-    ZP      = ''
-    MP2     = ''
+    HF       = ''
+    ZP       = ''
+    MP2      = ''
+    MP2_opp  = ''
+    MP2_same = ''
     sysDict = {}
 
     spec = psi_check_spec(path, File)
@@ -176,7 +186,12 @@ def energy_psi(path, File, energy):
             elif 'Reference Energy' in line:
                 HF  = line.split()
                 HF  = HF[len(HF) - 2]
-
+            elif "Same-Spin Energy          =" in line:
+                MP2_same = line.split()
+                MP2_same = MP2_same[len(MP2_same) - 2]
+            elif "Opposite-Spin Energy      =" in line:
+                MP2_opp = line.split()
+                MP2_opp = MP2_opp[len(MP2_opp) - 2]
     # FINDING ZP NOT INCLUDED
 
     # CREATE DICTIONARY OF FILE
@@ -186,6 +201,8 @@ def energy_psi(path, File, energy):
     sysDict["HF"  ] = HF
     sysDict["ZP"  ] = ZP
     sysDict["MP2" ] = MP2
+    sysDict["MP2_same"] = MP2_same
+    sysDict["MP2_opp"] = MP2_opp
 
     energy.append(sysDict)
 

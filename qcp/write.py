@@ -45,16 +45,18 @@ def write_job(path, name, lines, cp = False):
 
 def write_energy(path, energy):
     import csv
-    with open(path + 'out_energies.csv', 'w') as csvfile:
+    with open(path + '/out_energies.csv', 'w') as csvfile:
          Write = csv.writer(csvfile, delimiter='|')
          ZP  = []
          MP2 = []
+         MP2_opp = []
          for d in energy:
              if d["ZP"]:
                  ZP.append(True)
              if d["MP2"]:
                  MP2.append(True)
-
+             if d["MP2_opp"]:
+                 MP2_opp.append(True)
          if True in ZP and True in MP2:
              Write.writerow(['File', 'Type', 'HF/DFT', 'ZPVE', 'MP2/SRS', 'Path'])
              for d in energy:
@@ -64,6 +66,11 @@ def write_energy(path, energy):
              Write.writerow(['File', 'Type', 'HF/DFT', 'ZPVE', 'Path'])
              for d in energy:
                  Write.writerow([d["File"], d["Type"], d["HF"], d["ZP"], d["Path"]])
+
+         elif True in MP2 and True in MP2_opp:
+             Write.writerow(['File', 'Type', 'HF', 'MP2', 'MP2_opp', 'MP2_same', 'Path'])
+             for d in energy:
+                 Write.writerow([d["File"], d["Type"], d["HF"], d["MP2"], d["MP2_opp"], d["MP2_same"], d["Path"]])
 
          elif True in MP2:
              Write.writerow(['File', 'Type', 'HF/DFT', 'MP2/SRS', 'Path'])

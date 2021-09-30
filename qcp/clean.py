@@ -1,7 +1,8 @@
 ### SED FILES WITH SOME EXTENSION
 def sed(path):
     import re, sys
-    from qcp.general import find_files
+    import subprocess as sp
+    from general import find_files
 
     print("Changes separated by &, any spaces will be included in the sed")
     ext = input("Only sed files with extention  [all]: ")
@@ -45,7 +46,7 @@ def sed(path):
                         linei = line
                         line  = line.replace(ii, jj)
                         print("Changed:", linei + "to     :", line)
-                    lines += line
+                lines += line
         open(File, 'w+').write(lines)
 
 
@@ -53,7 +54,7 @@ def sed(path):
 def rename(path):
     import re, sys
     import subprocess as sp
-    from qcp.general import find_files
+    from general import find_files
 
     sp.call('ls')
 
@@ -92,7 +93,7 @@ def rename(path):
 def deleteJob():
     import re, sys
     import subprocess as sp
-    from   qcp.supercomp import host
+    from   supercomp import host
 
     que = []
     IDs_list = []

@@ -8,20 +8,17 @@ def job_replace(name, jobTemp):
     match_b4_chk = re.compile('([^\s=]*)\.chk')
     match_b4_log = re.compile('([^\s=]*)\.log')
     match_b4_out = re.compile('([^\s=]*)\.out')
-    match_b4_err = re.compile('([^\s=]*)\.err')
 
     match_b4_inp  = match_b4_inp.findall(jobTemp)  # TURN OBJECT TO STRING
     match_b4_chk  = match_b4_chk.findall(jobTemp)  # TURN OBJECT TO STRING
     match_b4_log  = match_b4_log.findall(jobTemp)  # TURN OBJECT TO STRING
     match_b4_out  = match_b4_out.findall(jobTemp)  # TURN OBJECT TO STRING
-    match_b4_err  = match_b4_err.findall(jobTemp)  # TURN OBJECT TO STRING
 
     swapDict = {
             '.inp' : match_b4_inp,
             '.chk' : match_b4_chk,
             '.log' : match_b4_log,
             '.out' : match_b4_out,
-            '.err' : match_b4_err,
             }
 
     for match, matches in swapDict.items():
@@ -29,8 +26,6 @@ def job_replace(name, jobTemp):
             jobTemp = jobTemp.replace(this + match, name + match)
 
     return jobTemp
-
-
 
 
 ### NUMBER OF TEMPLATE FILES IN FOLDER
@@ -120,18 +115,19 @@ def g09(path, File, template, sysData):
     # CREATE xyzData
     xyzData = []
     for frag in fragList:
-        for atm in atmList:
-            if atm['id'] in frag['ids']:
-                xyzData.append([atm['sym'], atm['nu'], atm["x"], atm["y"], atm["z"]])
+        for ID in frag['ids']:
+            atm = atmList[ID]
+            xyzData.append([atm['sym'], atm["x"], atm["y"], atm["z"]])
 
     # PUT XYZ COORDS IN TEMPLATE
     input = xyzTemp(path, template, xyzData)
+
 
     # ADD COORDS IN TEMPLATE
     for i in range(len(input)):
         if type(input[i]) != list:
 
-            # CHANGE NAMES BEFORE LOG ETC.
+            # CHANGE NAMES BEFORE LOG Ect.
             input[i] = job_replace(name, input[i])
 
             # CHANGE CHARGE AND MULT
@@ -142,21 +138,40 @@ def g09(path, File, template, sysData):
                 # IF CHRG = MULT COULD BE TRICKY
                 else:
                     input[i] = str(totChrg) + ' ' + str(totMult) + '\n'
+            # CHANGE OUTPUT NAME
+#            if re.search('\.log', input[i]) \
+#            or re.search('\.out', input[i]):
+#                # KEEP LINE TO REPLACE
+#                chng = input[i].split()
+#                for val, bit in enumerate(chng):
+#                    print(chng)
+#                    if '.log' in bit:
+#                        print(bit)
+#                        n = val
+#                # chng[n] = a1b3d2.log
+#                input[i] = input[i].replace(chng[n], name + '.log')
+#
+#            # CHANGE CHECKPOINT NAME
+#            if re.search('%chk', input[i]): # %chk=reactant.chk
+#                # KEEP LINE TO REPLACE
+#                chng = input[i].split('=')
+#                for val, bit in enumerate(chng):
+#                    if '%chk' in bit:
+#                        n = val + 1
+#                # chng[n] = a1b3d2.log
+#                input[i] = input[i].replace(chng[n], name + '.chk\n')
 
     write_job(path, name, input)
-
 
 ### GAMESS - NOT FMO - ONE NODE
 def gms(path, File, template, sysData, jobTemp):
 
     import re
-    from supercomp  import host
+    from general    import xyzPull
+    from general    import hardware
     from templates  import gms_rjnJob
     from templates  import gms_mgsJob
     from templates  import gms_gaiJob
-    from templates  import gms_masJob
-    from templates  import gms_monJob
-    from templates  import gms_stmJob
     from write      import write_gmsInp
     from write      import write_job
 
@@ -171,9 +186,9 @@ def gms(path, File, template, sysData, jobTemp):
     # CREATE xyzData
     xyzData = []
     for frag in fragList:
-        for atm in atmList:
-            if atm['id'] in frag['ids']:
-                xyzData.append([atm['sym'], atm['nu'], atm["x"], atm["y"], atm["z"]])
+        for ID in frag['ids']:
+            atm = atmList[ID]
+            xyzData.append([atm['sym'], atm['nu'], atm["x"], atm["y"], atm["z"]])
 
     # GET TEMPLATE LINES WITH COORDS
     input = xyzTemp(path, template, xyzData)
@@ -219,33 +234,27 @@ def gms(path, File, template, sysData, jobTemp):
     write_gmsInp(npath, name, input)
 
     # WRITE JOB
-    lines = False
     if jobTemp:
         lines = job_replace(name, jobTemp)
     else:
-        hw = host()
+        hw = hardware()
         if hw == 'rjn':
-            lines = gms_rjnJob(name)
-        elif hw == 'mgs':
-            lines = gms_mgsJob(name)
-        elif hw == 'gai':
-            lines = gms_gaiJob(name)
-        elif hw == 'mas':
-            lines = gms_masJob(name)
-        elif hw == 'mon':
-            lines = gms_monJob(name)
-        elif hw == 'stm':
-            lines = gms_stmJob(name)
+            lines = gms_rjnJob(name, memory, ddi)
+        if hw == 'mgs':
+            lines = gms_mgsJob(name, memory, ddi)
+        if hw == 'gai':
+            lines = gms_gaiJob(name, memory, ddi)
 
-    if lines:
-        write_job(npath, name, lines)
+    write_job(npath, name, lines)
 
 
 ### PSI4 - ONE NODE
 def psi(path, File, template, sysData, jobTemp):
 
     import re
-    from supercomp  import host
+    from general    import xyzPull
+    from general    import hardware
+    from system     import systemData
     from templates  import psi_rjnJob
     from templates  import psi_gaiJob
     from write      import write_inp
@@ -262,9 +271,9 @@ def psi(path, File, template, sysData, jobTemp):
     # CREATE xyzData
     xyzData = []
     for frag in fragList:
-        for atm in atmList:
-            if atm['id'] in frag['ids']:
-                xyzData.append([atm['sym'], atm['nu'], atm["x"], atm["y"], atm["z"]])
+        for ID in frag['ids']:
+            atm = atmList[ID]
+            xyzData.append([atm['sym'], atm["x"], atm["y"], atm["z"]])
 
     # PUT XYZ IN TEMPLATE
     input = xyzTemp(path, template, xyzData)
@@ -289,18 +298,17 @@ def psi(path, File, template, sysData, jobTemp):
             memory  = int(line[1])
 
     # WRITE JOB
-    lines = False
     if jobTemp:
         lines = job_replace(name, jobTemp)
     else:
-        hw = host()
+        hw = hardware()
         if hw == 'rjn':
             lines = psi_rjnJob(name)
-        elif hw == 'gai':
+        if hw == 'gai':
             lines = psi_gaiJob(name)
 
-    if lines:
-        write_job(npath, name, lines)
+    write_job(npath, name, lines)
+
 
 
 ### FMO - MANY NODES ON RAIJIN AND MAGNUS \\
@@ -308,51 +316,48 @@ def psi(path, File, template, sysData, jobTemp):
 def fmo(path, File, template, sysData, jobTemp):
 
     import os, re
-    from supercomp  import host
+    from general    import hardware
     from chemData   import pTable
     from templates  import fmo_rjnJob
     from templates  import fmo_mgsJob
-    from templates  import fmo_stmJob
     from templates  import fmo_gaiJob
-    from templates  import fmo_monJob
-    from templates  import fmo_masJob
     from templates  import gms_rjnJob
     from templates  import gms_mgsJob
-    from templates  import gms_masJob
-    from templates  import gms_monJob
     from templates  import gms_gaiJob
-    from templates  import gms_stmJob
     from tempInp    import fmo_ions
     from write      import write_xyz
     from write      import write_gmsInp
     from write      import write_job
 
     # NAME FOR WRITING FILE, DIRS
-    ions = False
     name = File.replace('.xyz','').split('_')[0]
 
     # MAKE NEW DIR AND NEW PATH
     npath = newDir(path, File, template)
 
     # UNPACK sysData
+    fmo = True
     mp2 = False
     fragList, atmList, totChrg, totMult = sysData
 
     # NUMBER OF FRAGS
     nfrags = len(fragList)
 
-    # CREATE xyzData
+    # MAKE xyzData
     xyzData = []
+    # USE LIST OF IDS TO APPEND
     for frag in fragList:
-        for atm in atmList:
-            if atm['id'] in frag['ids']:
-                xyzData.append([atm['sym'], atm['nu'], atm["x"], atm["y"], atm["z"]])
+        for ID in frag['ids']:
+            atm = atmList[ID]
+            xyzData.append([atm['sym'], atm['nu'], atm["x"], atm["y"], atm["z"]])
 
     # TEMPLATE LINES
     input = xyzTemp(path, template, xyzData)
+    #print(input)
     fmo_input = []
-
+    # ONE LINE REPLACEMENTS - NO MULT YET ***
     # IF RUNTYP IS ENERGY MAKE ION JOBS
+    ions = False
     for ind in range(len(input)):
         if 'NGROUP' in input[ind]:
             spl_line = re.split('=| ', input[ind])
@@ -399,7 +404,6 @@ def fmo(path, File, template, sysData, jobTemp):
                     input[ind] = input[ind].replace('MULT(1)=' + in_chrg,\
                     'MULT(1)=' + ','.join(str(p) for p in mults) + '\n')
 
-
         # CHECK IF SPEC FOR ION CALCS
         if 'RUNTYP' in input[ind]:
             spl_line = re.split('=| ', input[ind])
@@ -407,7 +411,6 @@ def fmo(path, File, template, sysData, jobTemp):
                 if 'RUNTYP' in bit:
                     if spl_line[val+1] == 'ENERGY':
                         ions = True
-
 
         # MEMORY USED IN INPUT USED FOR JOB MEMORY
         if 'MWORDS' in input[ind]:
@@ -444,21 +447,17 @@ def fmo(path, File, template, sysData, jobTemp):
         if type(line) != list:
             # INDAT MAY BE DIFF NUMBER OF LINES TO NEW INDAT
             if 'INDAT' in line:
-                fmo_input.append('    INDAT(1)=0,1,-' + str(len(fragList[0]['ids'])) + ',\n')
-                # REMEMBER WHERE LAST FRAG FINISHED
-                n = len(fragList[0]['ids']) + 1
+                fmo_input.append('    INDAT(1)=0,1,-' + str(fragList[0]['ids'][-1] + 1) + ',\n')
                 for frag in fragList:
                     if not frag is fragList[0]:
-                        fmo_input.append(' '*13 + '0,' + str(n) + \
-                                ',-' + str(n + len(frag['ids']) - 1) + ',\n')
-                        n += len(frag['ids'])
+                        fmo_input.append(' '*13 + '0,' + str(frag['ids'][0] + 1) + \
+                                ',-' + str(frag['ids'][-1] + 1) + ',\n')
                 fmo_input.append(' '*13 + '0\n')
 
             # SO NOT PASSED TO ELSE // EXTRA LINES TO DETERMINE FRAGMENT
             elif re.search('^\s*0,[0-9]{1,3},-[0-9]{1,3},\s*$', line) or \
                       re.search('^\s*0\s*$', line):
                 pass
-
             # ATOM LIST MAY BE DIFF NUMBER OF LINES TO NEW ATOM LIST
             elif re.search('^\s*[A-Za-z]*\s*[0-9]*\.0*$', line):
                 if not seenA:
@@ -472,7 +471,6 @@ def fmo(path, File, template, sysData, jobTemp):
                                 fmo_input.append(' ' + str(atmUniq[i]) + ' ' + \
                                 str(data[0]) + '\n')
                     seenA = True
-
             # EVERY OTHER LINE AS IS
             else:
                 fmo_input.append(line)
@@ -480,46 +478,55 @@ def fmo(path, File, template, sysData, jobTemp):
             fmo_input.append(line)
 
     # HARDWARE FOR WRITING
-    hw = host()
+    hw = hardware()
+    # XYZ OF IONS ------------------------------------
     if ions:
+        ncat = 0
+        nani = 0
+        nnrt = 0
+        nunk = 0
         # FOR EACH FRAGMENT
-        for frag in fragList:
+        for i, frag in enumerate(fragList):
             ifrag = []
-            for ID in frag['ids']:
-                atm = atmList[ID]
-                ifrag.append([atm['sym'], atm['nu'], atm["x"], atm["y"], atm["z"]])
+            for val, atm in enumerate(xyzData):
+                if val in frag['ids']:
+                    ifrag.append(atm)
+
+            # IN CASE QUESTION MARK
+            try:
+                if frag['chrg'] < 0:
+                    ion = 'anion' + str(nani)
+                    nani += 1
+                elif frag['chrg'] > 0:
+                    ion = 'cation' + str(ncat)
+                    ncat += 1
+                else:
+                    ion = 'neutral' + str(nnrt)
+                    nnrt += 1
+            except:
+                if frag['chrg'] == '?':
+                    ion = 'unknown' + str(nunk)
+                    nunk += 1
 
             # MAKE FOLDER AND XYZ
-            if not os.path.isdir(npath + name + '-'+ frag["name"]):
-                os.mkdir(npath + name + '-'+ frag["name"])
-            write_xyz(npath + name + '-'+ frag["name"] + '/', name + '-'+ frag["name"], ifrag)
+            if not os.path.isdir(npath + ion):
+                os.mkdir(npath + ion)
+            write_xyz(npath + ion + '/', ion, ifrag)
 
             # INPUT AND OUTPUT FOR JOB
             input = fmo_ions(str(frag['chrg']), ifrag, bset, mp2)
-            write_gmsInp(npath + name + '-'+ frag["name"] + '/', name + '-'+ frag["name"], input)
+            write_gmsInp(npath + ion + '/', ion, input)
 
             # WRITE JOB
-            lines = False
+            if hw == 'rjn':
+                lines = gms_rjnJob(ion, memory, ddi)
+            if hw == 'mgs':
+                lines = gms_mgsJob(ion, memory, ddi)
+            if hw == 'gai':
+                lines = gms_gaiJob(ion, memory, ddi)
+            write_job(npath + fol + '/', ion, lines)
 
-            if jobTemp:
-                # lines = job_replace(name, jobTemp)
-                lines = job_replace(name + '-' + frag["name"], jobTemp)
-            else:
-                if hw == 'rjn':
-                    lines = gms_rjnJob(name + '-'+ frag["name"])
-                elif hw == 'mgs':
-                    lines = gms_mgsJob(name + '-'+ frag["name"])
-                elif hw == 'gai':
-                    lines = gms_gaiJob(name + '-'+ frag["name"])
-                elif hw == 'mas':
-                    lines = gms_masJob(name + '-'+ frag["name"])
-                elif hw == 'mon':
-                    lines = gms_monJob(name + '-'+ frag["name"])
-                elif hw == 'stm':
-                    lines = gms_stmJob(name + '-'+ frag["name"])
 
-            if lines:
-                write_job(npath + name + '-'+ frag["name"] + '/', name + '-'+ frag["name"], lines)
 
     # -------------------------------------------------
 
@@ -527,85 +534,14 @@ def fmo(path, File, template, sysData, jobTemp):
     write_gmsInp(npath, name, fmo_input)
 
     # WRITE JOB
-    lines = False
-
     if jobTemp:
         lines = job_replace(name, jobTemp)
     else:
         if hw == 'rjn':
             lines = fmo_rjnJob(name, nfrags, memory, ddi)
-        elif hw == 'mgs':
+        if hw == 'mgs':
             lines = fmo_mgsJob(name, nfrags, memory, ddi)
-        elif hw == 'stm':
-            lines = fmo_stmJob(name, nfrags, memory, ddi)
-        elif hw == 'gai':
+        if hw == 'gai':
             lines = fmo_gaiJob(name)#, nfrags, memory, ddi)
-        elif hw == 'mon':
-            lines = fmo_monJob(name, nfrags, memory, ddi)
-        elif hw == 'mas':
-            lines = fmo_masJob(name, nfrags, memory, ddi)
 
-    if lines:
-        write_job(npath, name, lines)
-
-
-
-### PSI4 - ONE NODE
-def orc(path, File, template, sysData, jobTemp):
-
-    import re
-    from supercomp  import host
-    from templates  import orc_rjnJob
-    from write      import write_inp
-    from write      import write_job
-
-    name = File.replace('.xyz','').split('_')[0]
-
-    # MAKE NEW DIR AND NEW PATH
-    npath  = newDir(path, File, template)
-
-    # UNPACK sysData
-    fragList, atmList, totChrg, totMult = sysData
-
-    # CREATE xyzData
-    xyzData = []
-    for frag in fragList:
-        for atm in atmList:
-            if atm['id'] in frag['ids']:
-                xyzData.append([atm['sym'], atm['nu'], atm["x"], atm["y"], atm["z"]])
-
-    # PUT XYZ IN TEMPLATE
-    input = xyzTemp(path, template, xyzData)
-
-    for i in range(len(input)):
-        if type(input[i]) != list:
-            # CHANGE CHRG AND MULT
-            if re.search('^\*xyzfile\s*-?[0-9]\s*-?[0-9]\s*', input[i]):
-                if totChrg == '?':
-                    print("Cannot determine chrg/mult, using template values")
-                # IF CHRG = MULT COULD BE TRICKY
-                else:
-                    line = input[i].split()
-                    if '.xyz' in line[-1]:
-                        input[i] = '*xyzfile ' + str(totChrg) + ' ' + str(totMult) + ' '+line[-1]
-
-            if re.search('.xyz', input[i]):
-                line     = input[i].strip()
-                line     = line.rsplit(' ', 1)[0]
-                input[i] = line+' '+name+'.xyz\n'
-
-    # WRITE INP
-    write_inp(npath, name, input)
-
-    # WRITE JOB
-    lines = False
-
-    if jobTemp:
-        lines = job_replace(name, jobTemp)
-    else:
-        hw = host()
-        if hw == 'rjn':
-            lines = orc_rjnJob(name)
-
-    if lines:
-        write_job(npath, name, lines)
+    write_job(npath, name, lines)

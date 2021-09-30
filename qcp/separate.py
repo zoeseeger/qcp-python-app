@@ -1,6 +1,6 @@
 def separate_mols(path, File, sysData):
 
-    from qcp.write import write_xyz
+    from write import write_xyz
 
     # NAME FOR WRITING FILE, DIRS
     name = File.replace('.xyz','').split('_')[0]

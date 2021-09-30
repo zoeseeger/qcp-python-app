@@ -1,10 +1,10 @@
 def comp_tasks(task, path, filename, jobfile):
     import os.path
-    from qcp.general  import find_files, software, softInp
-    from qcp.system   import systemData
-    from qcp.pprint   import stat_print, file_print, e_print
-    from qcp.pprint   import noFiles
-    from qcp.logFile  import sort
+    from general        import find_files, software, softInp
+    from system         import systemData
+    from pprint         import stat_print, file_print, e_print
+    from pprint         import noFiles
+    from logFile        import sort
 
     # FORMAT EXPECTED
     if filename:
@@ -17,64 +17,75 @@ def comp_tasks(task, path, filename, jobfile):
     # GENERATE JOB/INP FROM TEMPLATE
     # EXPECTS .template FILE IN PATH DIRECTORY
     if task == "1":
-        from qcp.genJob import g09, gms, psi, fmo, orc
+        import sys
+        from genJob  import g09, gms, psi, fmo, orc
 
-        fmoC         = False
-        level        = False                   # NO LEVELS
-
+        # RECURSIVE FILE CREATION
         if not Files:
-            file_pattern = ['.xyz']            # FILES TO CHECK
+            #level        = False                   # ALL LEVELS
+            level        = input("Number of subdirs [0-9]: ")
+            file_pattern = ['.xyz']        # FILES TO CHECK
             Files        = find_files(path, level, file_pattern)
             if len(Files) == 0:
                 noFiles()
 
-        # CHECK IF ANY TEMPLATE FILES ARE FMO FOR CORRECT FRAGMENTATION
-        for template in os.listdir(path):
-            if template.endswith('template'):
-                with open(template, 'r+') as f:
-                    for line in f:
-                        if '$FMO' in line:
-                            fmoC = True
-
-        # CHECK IF JOB TEMPLATE
-        jobTemp = False
-
-        if jobfile:
-            jobTemp = open(path + jobfile, 'r+').read()
-
-        elif os.path.isfile(path + 'template.job'):
-            jobTemp = open(path + 'template.job', 'r+').read()
-
-        # SEARCH FILES
         for path, File in Files:
+
+            # CHECK IF ANY TEMPLATE FILES ARE FMO FOR CORRECT FRAGMENTATION
+            fmoC = False
+            templates = []
+            for template in os.listdir(path):
+                if template.endswith('template'):
+                    templates.append(template)
+                    with open(template, 'r+') as f:
+                        for line in f:
+                            if '$FMO' in line:
+                                fmoC = True
+
+            # CHECK IF TEMPLATE FILE HAS BEEN FOUND
+            if len(templates) == 0:
+                sys.exit("No '*template' files found in directory.")
+
+            # CHECK IF JOB TEMPLATE
+            jobTemp = False
+
+            if jobfile:
+                jobTemp = open(path + jobfile, 'r+').read()
+
+            elif os.path.isfile(path + 'template.job'):
+                jobTemp = open(path + 'template.job', 'r+').read()
+
+            # SEARCH FILES
             print('-'*40)
             file_print(path, File, "Using")
             # ONLY HAPPEN ONCE FOR EACH XYZ
             sysData = systemData(path, File, fmoC)
             # COMPLETE FOR EVERY TEMPLATE
-            for template in os.listdir(path):
-                if template.endswith('template'):
-                    file_print(path, template, "With template")
-                    soft = softInp(path, template)
-                    if soft == 'g09':
-                        # JOB INCLUDED IN INPUT
-                        g09(path, File, template, sysData)
-                    elif soft == 'gms':
-                        gms(path, File, template, sysData, jobTemp)
-                    elif soft == 'psi':
-                        psi(path, File, template, sysData, jobTemp)
-                    elif soft == 'fmo':
-                        fmo(path, File, template, sysData, jobTemp)
-                    elif soft == 'orc':
-                        orc(path, File, template, sysData, jobTemp)
-                    else:
-                        g09(path, File, template, sysData)
+            for template in templates:
+                file_print(path, template, "With template")
+                soft = softInp(path, template)
+                if soft == 'g09':
+                    # JOB INCLUDED IN INPUT
+                    g09(path, File, template, sysData)
+                elif soft == 'gms':
+                    gms(path, File, template, sysData, jobTemp)
+                elif soft == 'psi':
+                    psi(path, File, template, sysData, jobTemp)
+                elif soft == 'fmo':
+                    fmo(path, File, template, sysData, jobTemp)
+                elif soft == 'orc':
+                    orc(path, File, template, sysData, jobTemp)
+                # WILL TREAT UNKNOWN INPUT FILE AS G09 TYPE
+                else:
+                    g09(path, File, template, sysData)
 
 
     ### PULL ENERGIES
     elif task == "2":
-        from qcp.energy import energy_g09, energy_gms, energy_psi
-        from qcp.write  import write_energy
+        from energy import energy_g09, energy_gms, energy_psi
+        from write  import write_energy
+        from os import getcwd
+        cwd = getcwd()
         energy       = []                           # TO PRINT AT END
         if not Files:
             level        = 100                      # ALL
@@ -98,7 +109,7 @@ def comp_tasks(task, path, filename, jobfile):
             e_print(energy)
         elif mkfi == 'y':
             e_print(energy)
-            write_energy(path, energy)
+            write_energy(cwd, energy)
 
 
     ### SORT LOG FILES
@@ -113,7 +124,7 @@ def comp_tasks(task, path, filename, jobfile):
         # SEARCH FILES
         for path, File in Files:
             # DO NOT SORT PREVIOUS LOG FILES
-            if not File.startswith('f-'):
+            if not File.startswith('f-') and not File.startswith('slurm'):
                 # GET SOFTWARE OF LOG
                 soft = software(path, File)
                 if not soft:
@@ -124,23 +135,24 @@ def comp_tasks(task, path, filename, jobfile):
 
     # MASS SED
     elif task == "4":
-        from qcp.clean import sed
+        from clean import sed
         sed(path)
 
     # MASS RENAME
     elif task == "5":
-        from qcp.clean import rename
+        from clean import rename
         rename(path)
 
     # DELETE N JOBS FROM QUEUE
     elif task == "6":
-        from qcp.supercomp import deleteJob
+        from supercomp import deleteJob
         deleteJob()
 
     # COUNTERPOISE
     elif task == '7':
-        from qcp.genJob   import g09, gms, psi, fmo
-        from qcp.genJobCP import psi_cpoise, g09_cpoise
+        import sys
+        from genJob   import g09, gms, psi, fmo
+        from genJobCP import psi_cpoise, g09_cpoise, orc_cpoise
 
         if not Files:
             level        = False                   # ZERO LEVELS
@@ -148,6 +160,26 @@ def comp_tasks(task, path, filename, jobfile):
             Files        = find_files(path, level, file_pattern)
             if len(Files) == 0:
                 noFiles()
+
+        templates = []
+        for template in os.listdir(path):
+            if template.endswith('template'):
+                templates.append(template)
+
+        # CHECK IF TEMPLATE FILE HAS BEEN FOUND
+        if len(templates) == 0:
+            sys.exit("No '*template' files found in directory.")
+
+        # ASK USER IF SPHERE FOR BSSE
+        task = input('                                          \n\
+                          1. Full counterpoise calculation      \n\
+                          2. Sphere around each molecule        \n\
+                                                           Task: ')
+        if task == '2':
+            # USER DEFINED DISTANCE
+            dist = input("Enter the radius of the solvation shell to include: ")
+        else:
+            dist = False
 
         # CHECK IF JOB TEMPLATE
         jobTemp = False
@@ -162,37 +194,38 @@ def comp_tasks(task, path, filename, jobfile):
             # ONLY HAPPEN ONCE FOR EACH XYZ
             sysData = systemData(path, File, True)
             # COMPLETE FOR EVERY TEMPLATE
-            for template in os.listdir(path):
-                if template.endswith('template'):
-                    soft = softInp(path, template)
-                    # PSI4 ONLY
-                    if soft == 'g09':
-                        # JOB INCLUDED IN INPUT
-                        g09_cpoise(path, File, template, sysData)
-                    elif soft == 'gms':
-                        pass
-                    elif soft == 'psi':
-                        psi_cpoise(path, File, template, sysData, jobTemp)
-                    elif soft == 'fmo':
-                        pass
+            for template in templates:
+                soft = softInp(path, template)
+                # PSI4 ONLY
+                if soft == 'g09':
+                    # JOB INCLUDED IN INPUT
+                    g09_cpoise(path, File, template, sysData, dist)
+                elif soft == 'gms':
+                    pass
+                elif soft == 'psi':
+                    psi_cpoise(path, File, template, sysData, jobTemp, dist)
+                elif soft == 'fmo':
+                    pass
+                elif soft == 'orc':
+                    orc_cpoise(path, File, template, sysData, jobTemp, dist)
 
     # DISTANCES AND ANGLES
     elif task == '8':
-        from qcp.geometry import sysGeom
+        from geometry import sysGeom
         # GET PATHS
         if not Files:
             level        = 1
             file_pattern = ['.xyz']        # FILES TO CHECK
             Files        = find_files(path, level, file_pattern)
-            Files = find_files(path, level, file_pattern)
             if len(Files) == 0:
                 noFiles()
 
         # ASK USER QUESTIONS ABOUT WHAT THEY WANT
-        task = input('                             \n\
-                      1. All interionic distances  \n\
-                      2. H-bonding data            \n\
-                                                   Task: ')
+        task = input('                                    \n\
+                          1. All interionic distances     \n\
+                          2. H-bonding data               \n\
+                          3. Intramolecular bond lengths  \n\
+                                                           Task: ')
 
         for path, File in Files:
             file_print(path, File, "Using")
@@ -202,7 +235,7 @@ def comp_tasks(task, path, filename, jobfile):
     # SUBMIT JOBS
     elif task == '9':
 
-        from qcp.supercomp import submit
+        from supercomp import submit
         # GET PATHS
         if not Files:
             level        = False                   # ALL LEVELS
@@ -227,7 +260,7 @@ def comp_tasks(task, path, filename, jobfile):
     # EXPECTS .xyz FILE IN PATH DIRECTORY
     elif task == "A":
         import sys
-        from qcp.inflate import expand
+        from xyzGenerate import expand
 
         level        = False                   # NO LEVELS
 
@@ -260,7 +293,7 @@ def comp_tasks(task, path, filename, jobfile):
     # INTERACTION ENERGY
     elif task == 'B':
 
-        from qcp.separate import separate_mols
+        from xyzGenerate import separate_mols
 
         # MAKE SURE CORRECT FRAGMENTATION
         check_frags  = True
@@ -287,10 +320,53 @@ def comp_tasks(task, path, filename, jobfile):
                 sysData = systemData(path, File, check_frags)
                 separate_mols(path, File, sysData)
 
+    # FLUORESCENCE DATA
+    elif task == 'C':
+        from extras import get_fluorescence_data
+
+        task = input('                                    \n\
+                          1. Fluorescence Data            \n\
+                                                           Task: ')
+        if task == '1' or task == "":
+            get_fluorescence_data()
+
+
+    # GET XYZ SOLVATION SHELL OF EACH FRAGMENT
+    elif task == 'D':
+        from xyzGenerate import xyzShell
+
+        # USER DEFINED DISTANCE
+        dist = input("Enter the radius of the solvation shell to include: ")
+
+        # MAKE SURE CORRECT FRAGMENTATION
+        check_frags  = True
+        level        = False                   # NO LEVELS
+
+        if not Files:
+            file_pattern = ['.xyz']            # FILES TO CHECK
+            Files        = find_files(path, level, file_pattern)
+            if len(Files) == 0:
+                noFiles()
+
+        # SEARCH FILES
+        for path, File in Files:
+            use = True
+            skip = ['anion', 'cation', 'unknown', 'neutral']
+            for i in skip:
+                if i in File:
+                    use = False
+
+            if use:
+                print('-'*40)
+                file_print(path, File, "Using")
+
+                # ONLY HAPPEN ONCE FOR EACH XYZ
+                sysData = systemData(path, File, check_frags)
+                xyzShell(path, File, sysData, dist)
 
     # CHECK COMPLETED JOBS
     elif task == '10':
-        from qcp.supercomp import host, rjn_q
+        from supercomp import host, rjn_q
 
         if os.path.exists(os.path.expanduser('~/sub.txt')):
 

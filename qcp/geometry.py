@@ -1,11 +1,51 @@
-def sysGeom(sysData, task):
+def add_frag_name(fragList):
+    from chemData import CationDB, AnionDB, NeutralDB, RadicalDB, NegRadDB, PosRadDB
 
+    def add_name(frag, db):
+        for mol, atoms in db.items():
+            if sorted(atoms) == sorted(frag['syms']):
+                frag['name'] = mol
+        return frag
+
+    for frag in fragList:
+        for db in (CationDB, AnionDB, NeutralDB, RadicalDB, NegRadDB, PosRadDB):
+            frag = add_name(frag, db)
+
+    return fragList
+
+def formula(lst):
+    counts = {}
+    for atom in lst:
+        if atom not in counts:
+            counts[atom] = 1
+        else:
+            counts[atom] += 1
+    ret = ''
+    for k, v in counts.items():
+        ret += f'{k}{v}'
+    return ret
+
+def add_fragment_to_atoms(atmList, fragList):
+    for atom in atmList:
+        for frag in fragList:
+            if atom['grp'] == frag['grp']:
+                try:
+                    atom['fragment'] = frag['name']
+                except KeyError: #unknown fragment
+                    atom['fragment'] = formula(frag['syms'])
+    return atmList
+
+
+def sysGeom(sysData, task):
     # SYSDATA
     # fragList = {'ids': [21], 'syms': ['Cl'], 'grp': 1, 'chrg': -1, 'mult': 1}
     # atmList = {'id': 710, 'sym': 'H', 'x': 11.5, 'y': 7.0, 'z': -18.5, 'grp': 80, 'nu': 1.0}
     # totChrg (int or '?')
     # totMult (int or '?')
     fragList, atmList, totChrg, totMult = sysData
+
+    fragList = add_frag_name(fragList)
+    atmList = add_fragment_to_atoms(atmList, fragList)
 
     # ALL DISTANCES CALCULATED
     if task == '1':
@@ -34,12 +74,13 @@ def sysGeom(sysData, task):
 
     # H-BONDING STUFF etc.
     if task == '2':
+
         h_cutoff = 2.5
         h_atoms  = ['N', 'O', 'F']
         bonds = []
         angs  = []
-        bond_format = '{:4}{:4}{:4}{:4}{:7.3f}'
-        angl_format = '{:4}{:4}{:4}{:4}{:4}{:4}{:9.3f}'
+        bond_format = '{:<4}{:<4}{:<4}{:<4}{:<7.3f}{:<10}{:<10}'
+        angl_format = '{:<4}{:<4}{:<4}{:<4}{:<4}{:<4}{:<9.3f}{:<10}{:<10}'
         # FOR INTERMOLECULAR :: DIFFERENT FRAGS
         print('-'*40)
         print('H-bonding distances: N, O, F only')
@@ -73,8 +114,6 @@ def sysGeom(sysData, task):
                                     for bond_atm in atmList:
                                         if bond_atm["id"] == bond_id:
                                             break
-                                    #print(hy, donor, bond_atm)
-
                                     if bond_atm["sym"] in h_atoms:
                                         # FIND ANGLE AND PRINT
                                         angle = ang(hy, donor, bond_atm)
@@ -86,26 +125,58 @@ def sysGeom(sysData, task):
                                                     donor['id']+1,
                                                     hy['id']+1,
                                                     bond_atm['id']+1,
-                                                    ang(hy, donor, bond_atm)))
+                                                    ang(hy, donor, bond_atm),
+                                                    donor['fragment'],
+                                                    hy['fragment']))
 
                                             bonds.append(bond_format.format(
                                                     donor['sym'],
                                                     hy['sym'],
                                                     donor['id']+1,
                                                     hy['id']+1,
-                                                    dist_between(atm1, atm2)))
+                                                    dist_between(atm1, atm2),
+                                                    donor['fragment'],
+                                                    hy['fragment']))
 
 
 
         bond_format = bond_format.replace('f', '')
-        print(bond_format.format('don', 'hy', 'id1', 'id2', 'dist'))
+        print(bond_format.format('don', 'hy', 'id1', 'id2', 'dist', 'frag1', 'frag2'))
         for line in bonds:
             print(line)
+        print()
         angl_format = angl_format.replace('f', '')
-        print(angl_format.format('don', 'hy', 'acc', 'id1', 'id2', 'id3', 'ang'))
+        print(angl_format.format('don', 'hy', 'acc', 'id1', 'id2', 'id3', 'ang', 'frag1', 'frag2'))
         for line in angs:
             print(line)
-
+    
+    ### Intramolecular distances ###
+    if task == '3':
+        for frag in fragList:
+            try:
+                print(frag['name'])
+            except KeyError:
+                print(formula(frag['syms']))
+            dists = {}
+            for atm1 in atmList:
+                if atm1['grp'] == frag['grp']: 
+                    for atm2 in atmList:
+                        if atm1 != atm2:
+                        # SECOND ATOM IN SAME FRAGMENT AS FIRST
+                            if atm2['grp'] == frag['grp']:
+                                atoms = [atm1['id'], atm2['id']]
+                                atoms.sort()
+                                atoms = tuple(atoms) #prevent duplicates
+                                if atoms not in dists:
+                                    dists[atoms] = [atm1['sym'], 
+                                                    atm2['sym'], 
+                                                    dist_between(atm1, atm2)]
+            for atm in atmList:
+                for connection in atm['con']:
+                    if (atm['id'], connection) in dists.keys():
+                        atm1_id, atm2_id = atm['id'] + 1, connection + 1
+                        atm1_sym, atm2_sym, dist = dists[(atm['id'], connection)]
+                        print(f'{atm1_sym:>4}{atm1_id:<4}{atm2_sym:>4}{atm2_id:<4}{dist:8.3f}')
 
 def dist_vec(atom1_dict, atom2_dict):
     i = atom1_dict

@@ -18,7 +18,7 @@ def get_min_interionic_dist(atmList):
 
 
 def rearrange_list(atmList, fragList):
-    from qcp.geometry import dist_between
+    from geometry import dist_between
 
     # ALL INTERIONIC DISTANCES
     dists = []
@@ -86,7 +86,7 @@ def get_relative_coords(atmList, fragList):
 
 
 def expand(path, File, sysData, dists):
-    from qcp.write import write_xyz
+    from write import write_xyz
 
     fragList, atmList, totChrg, totMult = sysData
 

@@ -10,7 +10,8 @@ def host():
     hostName = sp.getoutput("hostname")
 
     hostDict = {'raijin': 'rjn', 'msgln': 'gai', 'm3': 'mas',
-                'magnus': 'mgs', 'monarch': 'mon'}
+                'magnus': 'mgs', 'monarch': 'mon',
+                'stampede': 'stm'}
 
     for key, value in hostDict.items():
         if key in hostName:
@@ -109,7 +110,7 @@ def mgs_q():
     user  = sp.getoutput("echo $USER")
     queue = get_queue("squeue -u " + user)
 
-    i += 1
+    i = 1
     for line in queue:
       if user in line:
         line = line.split()
@@ -122,6 +123,33 @@ def mgs_q():
         temp_dict['status'] = line[5]
         temp_dict['start']  = line[6]
         temp_dict['nodes']  = line[10]
+
+        queDicts.append(temp_dict)
+        i += 1
+
+    return queDicts
+
+def stm_q():
+    import subprocess as sp
+
+    queDicts = []
+
+    user  = sp.getoutput("echo $USER")
+    queue = get_queue("squeue -u " + user)
+
+    i = 1
+    for line in queue:
+      if user in line:
+        line = line.split()
+
+        temp_dict           = {'id' : line[0]}
+        temp_dict['num']    = i
+        temp_dict['queue']  = line[1]
+        temp_dict['name']   = line[2]
+        temp_dict['user']   = line[3]
+        temp_dict['status'] = line[4]
+        temp_dict['time']   = line[5]
+        temp_dict['nodes']  = line[6]
 
         queDicts.append(temp_dict)
         i += 1
@@ -200,6 +228,7 @@ def deleteJob():
              'mgs' : mgs_q,
              'mas' : mas_q,
              'mon' : mon_q,
+             'stm' : stm_q
              }
 
     queDicts = call_q[hw]()
@@ -242,12 +271,12 @@ def deleteJob():
                 if hw is 'rjn' or hw is 'gai':
                     sp.call("qdel "  + jobD['id'], shell=True)
                     print("Removed " + jobD['id'] + " from queue")
-                elif hw is 'mgs' or hw is 'mas':
+                elif hw is 'mgs' or hw is 'mas' or hw is 'stm' or hw is 'mon':
                     sp.call("scancel "  + jobD['id'], shell=True)
                     print("Removed "    + jobD['id'] + " from queue")
-                elif hw is 'mon':
-                    sp.call("scancel "  + jobD['id'], shell=True)
-                    print("Removed "    + jobD['id'] + " from queue")
+                # elif hw is 'mon':
+                    # sp.call("scancel "  + jobD['id'], shell=True)
+                    # print("Removed "    + jobD['id'] + " from queue")
 
     # IF DELETING BY NAME
     elif typ == '3':
@@ -262,14 +291,14 @@ def deleteJob():
                 toDel_list.append(jobD['id'])
 
         # DELETE
-        toDel = input("Are you sure? y/n ")
+        toDel = input("Are you sure? [y/n] ")
         if toDel == 'y':
             for ID in toDel_list:
                 if hw is 'rjn' or hw is 'gai':
                     sp.call("qdel "  + ID, shell=True)
                     print("Removed " + ID + " from queue")
 
-                elif hw is 'mgs' or hw is 'mas' or hw is 'mon':
+                elif hw is 'mgs' or hw is 'mas' or hw is 'mon' or hw is 'stm':
                     sp.call("scancel "  + ID, shell=True)
                     print("Removed "    + ID + " from queue")
         else:
@@ -292,6 +321,9 @@ def submit(File):
             Time = time.strftime("%H:%M:%S")
             npath = os.getcwd()
             f.write('{:12}{:10}{:8} {:30}  {}\n'.format(date, Time, ID, File, npath))
+    elif hw == 'stm':
+        ID = sp.check_output(['sbatch', File]).decode("utf-8").strip().split(' ')[-1]
+        print("Submitted: {:8}{}".format(ID, File))
     elif hw == 'mgs':
         ID = sp.check_output(['sbatch', File]).decode("utf-8").strip().split(' ')[3]
         print("Submitted: {:8}{}".format(ID, File))

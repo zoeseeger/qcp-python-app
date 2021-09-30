@@ -1,6 +1,6 @@
 # CHECK FOR RAIJIN WALLTIME EXCEEDED
 def rjn_wall(path, File, err, ext, stat):
-    import glob
+    import os, re, glob
     from datetime import timedelta as td
     t_tak = 0
     t_lim = 1
@@ -36,6 +36,7 @@ def rjn_wall(path, File, err, ext, stat):
 
 ### FIND END STATUS GAUSSIAN
 def g09_log(path, File, spec):
+    import os, re
     from general  import eof
     err  = False
     ext  = False
@@ -100,7 +101,9 @@ def g09_log(path, File, spec):
 
 ### FIND END STATUS GAMESS
 def gms_log(path, File, spec):
+    import os
     from general  import eof
+    from pprint   import stat_print
     err  = False
     ext  = False
     stat = False
@@ -138,6 +141,10 @@ def gms_log(path, File, spec):
                 err  = 'hes'
                 ext  = '_hesError'
                 break
+            elif "DUE TO TIME LIMIT" in line:
+                stat = 11
+                err  = 'time'
+                ext  = '_timeLimit'
             elif "ION OF GAMESS TERMINATED NORMA" in line:
                     stat = 7
                     ext  = '_eGeom'

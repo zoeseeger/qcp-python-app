@@ -73,7 +73,7 @@ def sep_mol(coords, distca, Type):
 
     import math
     import numpy       as np
-    from   pprint      import detec
+    from   p_print      import detec
     from   chemData    import pTable
 
     atmList = []
@@ -357,7 +357,7 @@ def isCation(a, b, q = False):
 
     import collections as col
     from chemData import CationDB
-    from pprint   import detec
+    from p_print   import detec
 
     #a = mol.atomListAsElem_Sym()
     isCat = False
@@ -378,7 +378,7 @@ def isAnion(a, b, q = False):
 
     import collections as col
     from chemData import AnionDB
-    from pprint   import detec
+    from p_print   import detec
 
     # q for quiet
     #a = mol.atomListAsElem_Sym()
@@ -407,7 +407,7 @@ def isAnion(a, b, q = False):
 def isNeutral(a, b, q = False):
     import collections as col
     from chemData import NeutralDB
-    from pprint   import detec
+    from p_print   import detec
 
     isNeu = False
     for key, molec in NeutralDB.items():
@@ -426,7 +426,7 @@ def isNeutral(a, b, q = False):
 def isRadical(a, b, q = False):
     import collections as col
     from chemData import RadicalDB
-    from pprint   import detec
+    from p_print   import detec
 
     isRad = False
     for key, molec in RadicalDB.items():

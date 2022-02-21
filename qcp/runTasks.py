@@ -2,8 +2,8 @@ def comp_tasks(task, path, filename, jobfile):
     import os.path
     from general        import find_files, software, softInp
     from system         import systemData
-    from pprint         import stat_print, file_print, e_print
-    from pprint         import noFiles
+    from p_print         import stat_print, file_print, e_print
+    from p_print         import noFiles
     from logFile        import sort
 
     # FORMAT EXPECTED

@@ -103,7 +103,7 @@ def g09_log(path, File, spec):
 def gms_log(path, File, spec):
     import os
     from general  import eof
-    from pprint   import stat_print
+    from p_print   import stat_print
     err  = False
     ext  = False
     stat = False
@@ -194,7 +194,7 @@ def sort(path, File, soft):
     from general  import gms_check_spec
     from general  import g09_check_spec
     from general  import psi_check_spec
-    from pprint   import stat_print
+    from p_print   import stat_print
     from write    import write_xyz
 
 
